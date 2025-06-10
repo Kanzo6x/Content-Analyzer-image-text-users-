@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .form-container {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result-box {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; }
+        .danger { background-color: #f8d7da; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">Content Analysis API</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <!-- Text Analysis Form -->
+            <div class="col-md-6 mb-4">
+                <div class="form-container">
+                    <h3 class="mb-4">Text Analysis</h3>
+                    <form id="textForm">
+                        <div class="mb-3">
+                            <label for="textInput" class="form-label">Enter Text to Analyze</label>
+                            <textarea class="form-control" id="textInput" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Analyze Text</button>
+                    </form>
+                    <div id="textResult" class="result-box"></div>
+                </div>
+            </div>
+
+            <!-- Image Analysis Form -->
+            <div class="col-md-6 mb-4">
+                <div class="form-container">
+                    <h3 class="mb-4">Image Analysis</h3>
+                    <form id="imageForm">
+                        <div class="mb-3">
+                            <label for="imageInput" class="form-label">Upload Image</label>
+                            <input type="file" class="form-control" id="imageInput" accept="image/*" required>
+                        </div>
+                        <div class="mb-3">
+                            <img id="imagePreview" class="img-fluid d-none" alt="Preview">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Analyze Image</button>
+                    </form>
+                    <div id="imageResult" class="result-box"></div>
+                </div>
+            </div>
+
+            <!-- Recommendation Form -->
+            <div class="col-md-12 mb-4">
+                <div class="form-container">
+                    <h3 class="mb-4">User Recommendations</h3>
+                    <form id="recommendationForm">
+                        <div class="mb-3">
+                            <label for="userIdInput" class="form-label">Enter User ID (1-10000)</label>
+                            <input type="number" class="form-control" id="userIdInput" min="1" max="10000" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Get Recommendations</button>
+                    </form>
+                    <div id="recommendationResult" class="result-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Text Analysis Form Handler
+        document.getElementById('textForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = document.getElementById('textInput').value;
+            const resultBox = document.getElementById('textResult');
+
+            try {
+                const response = await fetch('/checktext', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text }),
+                });
+                const data = await response.json();
+                
+                resultBox.style.display = 'block';
+                resultBox.className = 'result-box ' + (data.is_toxic ? 'danger' : 'success');
+                resultBox.innerHTML = `<p><strong>Result:</strong> ${data.message}</p>`;
+            } catch (error) {
+                resultBox.style.display = 'block';
+                resultBox.className = 'result-box danger';
+                resultBox.innerHTML = '<p>Error analyzing text</p>';
+            }
+        });
+
+        // Image Analysis Form Handler
+        document.getElementById('imageForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('imageInput').files[0];
+            const resultBox = document.getElementById('imageResult');
+
+            try {
+                const base64 = await convertToBase64(file);
+                const response = await fetch('/checkimage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: base64.split(',')[1] }),
+                });
+                const data = await response.json();
+                
+                resultBox.style.display = 'block';
+                resultBox.className = 'result-box ' + (data.prediction.is_harmful ? 'danger' : 'success');
+                resultBox.innerHTML = `
+                    <p><strong>Class:</strong> ${data.prediction.class_name}</p>
+                    <p><strong>Status:</strong> ${data.message}</p>
+                `;
+            } catch (error) {
+                resultBox.style.display = 'block';
+                resultBox.className = 'result-box danger';
+                resultBox.innerHTML = '<p>Error analyzing image</p>';
+            }
+        });
+
+        // Recommendation Form Handler
+        document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('userIdInput').value;
+            const resultBox = document.getElementById('recommendationResult');
+
+            try {
+                const response = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_id: parseInt(userId) }),
+                });
+                const data = await response.json();
+                
+                resultBox.style.display = 'block';
+                if (data.error) {
+                    resultBox.className = 'result-box danger';
+                    resultBox.innerHTML = `<p><strong>Error:</strong> ${data.error}</p>`;
+                } else {
+                    resultBox.className = 'result-box success';
+                    let recommendationsHtml = '<h4>Similar Users:</h4><ul class="list-group">';
+                    data.recommendations.forEach(rec => {
+                        recommendationsHtml += `
+                            <li class="list-group-item">
+                                <strong>Name:</strong> ${rec.name}<br>
+                                <strong>User ID:</strong> ${rec.user_id}<br>
+                                <strong>Similarity Score:</strong> ${(rec.similarity_score * 100).toFixed(2)}%
+                            </li>`;
+                    });
+                    recommendationsHtml += '</ul>';
+                    resultBox.innerHTML = recommendationsHtml;
+                }
+            } catch (error) {
+                resultBox.style.display = 'block';
+                resultBox.className = 'result-box danger';
+                resultBox.innerHTML = '<p>Error getting recommendations</p>';
+            }
+        });
+
+        // Image Preview Handler
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const preview = document.getElementById('imagePreview');
+            const file = e.target.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('d-none');
+            }
+        });
+
+        // Convert image to base64
+        function convertToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
