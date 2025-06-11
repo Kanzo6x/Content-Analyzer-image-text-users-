@@ -47,13 +47,13 @@ class ImageModel:
             class_name = "Dog" if is_dog else "Cat"
             
             # Check for harmful content threshold
-            if confidence < 0.98:
+            if confidence < 0.995:
                 class_name = "Not Harmful"
                 
             return {
                 'class_name': str(class_name),
                 'confidence': float(confidence),
-                'is_harmful': int(confidence >= 0.98)  # Convert bool to int
+                'is_harmful': int(confidence >= 0.995)  # Convert bool to int
             }
             
         except Exception as e:
