@@ -57,6 +57,7 @@ class ImageAiModelResource(Resource):
             return {
                 'prediction': {
                     'class_name': result['class_name'],
+                    'confidence': result['confidence'],  # Make sure confidence is included
                     'is_harmful': bool(result['is_harmful'])
                 },
                 'message': 'Harmful content detected' if result['is_harmful'] else 'Non-harmful content'
