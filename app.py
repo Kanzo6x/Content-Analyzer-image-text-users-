@@ -99,7 +99,10 @@ api.add_resource(ImageAiModelResource, '/checkimage', endpoint='checkimage')
 api.add_resource(RecommendationResource, '/recommend', endpoint='recommend')
 
 def main():
-    app.run(host='0.0.0.0',port=5000)
+    # For development, you can use a self-signed certificate
+    # For production, replace with your actual certificate paths
+    ssl_context = ('cert.pem', 'key.pem')
+    app.run(host='0.0.0.0', port=5000, ssl_context=ssl_context)
 
 if __name__ == '__main__':
     main()
