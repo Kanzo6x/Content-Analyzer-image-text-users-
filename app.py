@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 from flask_restful import Api, Resource
-from handlers.model_handler import ToxicityModel
+from handlers.textModel_handler import ToxicityModel
 from handlers.imageModel_handler import ImageModel
 from handlers.recommendation_handler import RecommendationModel
 
