@@ -54,16 +54,16 @@ class ImageModel:
         )
         return model.to(self.device)
 
-    def preprocess_image(self, img_data):
-        # Convert base64 to image
-        img = Image.open(io.BytesIO(base64.b64decode(img_data))).convert('RGB')
+    def preprocess_image(self, file):
+        # Convert file to image
+        img = Image.open(file).convert('RGB')
         img_tensor = self.transform(img).unsqueeze(0).to(self.device)
         return img_tensor
 
-    def predict_image(self, img_data):
+    def predict_image(self, file):
         try:
             # Preprocess the image
-            img_tensor = self.preprocess_image(img_data)
+            img_tensor = self.preprocess_image(file)
             
             # Make prediction
             with torch.no_grad():

@@ -1,10 +1,13 @@
 from flask import Flask, request, render_template
 from flask_restful import Api, Resource
+from flask_cors import CORS
+
 from handlers.textModel_handler import ToxicityModel
 from handlers.imageModel_handler import ImageModel
 from handlers.recommendation_handler import RecommendationModel
 
 app = Flask(__name__, template_folder='templates')
+CORS(app)  # Enable CORS
 app.secret_key = 'FREE USE'
 api = Api(app)
 
@@ -45,11 +48,18 @@ class ImageAiModelResource(Resource):
 
     def post(self):
         try:
-            data = request.get_json()
-            if not data or 'image' not in data:
-                return {'error': 'No image provided'}, 400
+            if 'image' not in request.files:
+                return {'error': 'No image file provided'}, 400
+            
+            file = request.files['image']
+            if file.filename == '':
+                return {'error': 'No selected file'}, 400
+                
+            if not file or not self.allowed_file(file.filename):
+                return {'error': 'Invalid file type. Allowed types are: jpg, jpeg, png'}, 400
 
-            result = image_model.predict_image(data['image'])
+            # Process the image directly
+            result = image_model.predict_image(file)
             
             if result is None:
                 return {'error': 'Error processing image'}, 500
@@ -57,7 +67,7 @@ class ImageAiModelResource(Resource):
             return {
                 'prediction': {
                     'class_name': result['class_name'],
-                    'confidence': result['confidence'],  # Make sure confidence is included
+                    'confidence': result['confidence'],
                     'is_harmful': bool(result['is_harmful'])
                 },
                 'message': 'Harmful content detected' if result['is_harmful'] else 'Non-harmful content'
@@ -65,6 +75,10 @@ class ImageAiModelResource(Resource):
 
         except Exception as e:
             return {'error': str(e)}, 500
+            
+    def allowed_file(self, filename):
+        ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 class RecommendationResource(Resource):
     def get(self):
