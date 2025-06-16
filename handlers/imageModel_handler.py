@@ -2,8 +2,6 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-import io
-import base64
 import os
 
 class ImageModel:
@@ -24,7 +22,7 @@ class ImageModel:
             self.model.eval()
             print("Successfully loaded model")
             
-            # Define image transformations
+            # Define image transformations (matching the training transforms)
             self.transform = transforms.Compose([
                 transforms.Resize((224, 224)),
                 transforms.ToTensor(),
@@ -39,11 +37,12 @@ class ImageModel:
         import torch.nn as nn
         from torchvision.models import VGG16_Weights
         
-        # Use the new weights parameter instead of pretrained
+        # Use pretrained VGG16
         model = models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1)
         for param in model.features.parameters():
             param.requires_grad = False
             
+        # Match the new classifier architecture
         model.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(25088, 128),
@@ -54,34 +53,25 @@ class ImageModel:
         )
         return model.to(self.device)
 
-    def preprocess_image(self, file):
-        # Convert file to image
-        img = Image.open(file).convert('RGB')
-        img_tensor = self.transform(img).unsqueeze(0).to(self.device)
-        return img_tensor
-
     def predict_image(self, file):
         try:
             # Preprocess the image
-            img_tensor = self.preprocess_image(file)
+            img = Image.open(file).convert('RGB')
+            img_tensor = self.transform(img).unsqueeze(0).to(self.device)
             
             # Make prediction
             with torch.no_grad():
                 prediction = self.model(img_tensor).item()
             
-            # Determine class and confidence
-            is_dog = prediction > 0.5
-            confidence = prediction if is_dog else 1 - prediction
-            class_name = "Dog" if is_dog else "Cat"
+            # Determine class (harmful vs not harmful)
+            is_harmful = prediction > 0.5
+            confidence = prediction if is_harmful else 1 - prediction
+            class_name = "Harmful" if is_harmful else "Not Harmful"
             
-            # Check for harmful content threshold
-            if confidence < 0.99:
-                class_name = "Not Harmful"
-                
             return {
                 'class_name': str(class_name),
                 'confidence': float(confidence),
-                'is_harmful': int(confidence >= 0.99)
+                'is_harmful': int(is_harmful)
             }
             
         except Exception as e:
