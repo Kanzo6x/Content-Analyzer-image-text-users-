@@ -65,12 +65,10 @@ class ImageModel:
             
             # Determine class (harmful vs not harmful)
             is_harmful = prediction > 0.5
-            confidence = prediction if is_harmful else 1 - prediction
             class_name = "Harmful" if is_harmful else "Not Harmful"
             
             return {
                 'class_name': str(class_name),
-                'confidence': float(confidence),
                 'is_harmful': int(is_harmful)
             }
             

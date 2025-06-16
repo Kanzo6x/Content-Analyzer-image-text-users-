@@ -129,7 +129,6 @@
                 resultBox.className = 'result-box ' + (data.prediction.is_harmful ? 'danger' : 'success');
                 resultBox.innerHTML = `
                     <p><strong>Class:</strong> ${data.prediction.class_name}</p>
-                    <p><strong>Confidence:</strong> ${data.prediction.confidence ? (data.prediction.confidence * 100).toFixed(2) : 0}%</p>
                     <p><strong>Status:</strong> ${data.message}</p>
                 `;
             } catch (error) {
